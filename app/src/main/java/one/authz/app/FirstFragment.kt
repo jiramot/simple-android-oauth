@@ -29,6 +29,7 @@ class FirstFragment : Fragment() {
 
         binding.buttonFirst.setOnClickListener {
             val intent = Intent(activity, WebViewActivity::class.java)
+            intent.putExtra("data", "https://app.authz.one/1234")
             startActivity(intent)
         }
     }

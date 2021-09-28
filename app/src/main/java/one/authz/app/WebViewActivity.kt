@@ -1,7 +1,7 @@
 package one.authz.app
 
 import android.app.Activity
-import android.net.Uri
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.webkit.WebView
@@ -21,18 +21,19 @@ class WebViewActivity : Activity() {
         const val APP_VERSION = "1.0"
     }
 
+    lateinit var mActivity: Activity
     lateinit var myWebView: WebView
     lateinit var clientId: String
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webview)
-        val action: String? = intent?.action
-        val data: Uri? = intent?.data
-        Log.i(TAG, "action $action")
-        Log.i(TAG, "data $data")
-        clientId = when (data) {
-            null -> "1234"
-            else -> data.pathSegments[0]
+        mActivity = this
+        clientId = when {
+            intent.data != null -> intent.data!!.pathSegments[0]
+            intent.getStringExtra("data") != null -> {
+                intent.getStringExtra("data")!!.replace("https://app.authz.one/", "")
+            }
+            else -> "1234"
         }
         myWebView = findViewById(R.id.webView)
         val settings = myWebView.settings
@@ -40,7 +41,7 @@ class WebViewActivity : Activity() {
         settings.javaScriptEnabled = true
         settings.userAgentString = "$defaultUserAgent $APP/$APP_VERSION $APP"
         settings.domStorageEnabled = true
-        myWebView.webViewClient = SimpleWebViewClient()
+        myWebView.webViewClient = SimpleWebViewClient(mActivity)
         getAccessTokenFrom("1234", clientId)
 
     }
@@ -59,7 +60,7 @@ class WebViewActivity : Activity() {
         })
     }
 
-    class SimpleWebViewClient : WebViewClient() {
+    class SimpleWebViewClient(val mActivity: Activity) : WebViewClient() {
         override fun onLoadResource(view: WebView?, url: String?) {
             Log.i(TAG, "onLoadResource $url")
             super.onLoadResource(view, url)
@@ -67,7 +68,12 @@ class WebViewActivity : Activity() {
 
         override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
             Log.i(TAG, "shouldOverrideUrlLoading $url")
-//            view.loadUrl(url)
+            if (url.contains("app.authz.one")) {
+                val intent = Intent(mActivity, WebViewActivity::class.java)
+                intent.putExtra("data", url)
+                mActivity.startActivity(intent)
+                return true
+            }
             return false
         }
     }
